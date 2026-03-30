@@ -18,10 +18,10 @@ enum GameState { MENU, PLAYING, GAME_OVER, LEVEL_COMPLETE }
 var current_state: GameState = GameState.MENU
 var current_level: int = 1
 
-# 设置选项
+# 设置选项（使用配置默认值）
 var settings: Dictionary = {
 	"sound_enabled": true,
-	"sound_volume": 0.8,
+	"sound_volume": GameConfig.AUDIO.default_volume,
 	"vibration_enabled": true,
 	"colorblind_mode": false,
 	"start_level": 1,  # 起始关卡设置
@@ -31,10 +31,10 @@ var settings: Dictionary = {
 var level_data: Dictionary = {}
 var remaining_worms: int = 0
 
-# 音效资源
-var collision_sound: AudioStream = preload("res://source/sound/effects/worm_collision.wav")
-var death_sound: AudioStream = preload("res://source/sound/effects/worm_death.wav")
-var select_sound: AudioStream = preload("res://source/sound/effects/worm_select.wav")
+# 音效资源（在 _ready 中动态加载）
+var collision_sound: AudioStream
+var death_sound: AudioStream
+var select_sound: AudioStream
 
 # BGM
 var bgm_player: AudioStreamPlayer
@@ -49,12 +49,19 @@ var bg_remaining_count: int = 0
 
 func _ready() -> void:
 	randomize()
+	_load_sound_effects()
 	_load_settings()
 	_init_bgm_player()
 	_load_bgm_tracks()
 	_load_bg_images()
 	# 延迟一帧确保资源完全加载
 	call_deferred("_play_bgm")
+
+## 加载音效资源
+func _load_sound_effects() -> void:
+	collision_sound = load(GameConfig.RESOURCES.sound_effects.collision)
+	death_sound = load(GameConfig.RESOURCES.sound_effects.death)
+	select_sound = load(GameConfig.RESOURCES.sound_effects.select)
 
 ## 震动反馈
 func vibrate(duration_ms: int) -> void:
@@ -73,14 +80,14 @@ func start_level(level: int) -> void:
 ## 关卡完成
 func complete_level() -> void:
 	current_state = GameState.LEVEL_COMPLETE
-	vibrate(30)
-	await get_tree().create_timer(0.1).timeout
-	vibrate(30)
+	vibrate(GameConfig.AUDIO.vibration.long)
+	await get_tree().create_timer(GameConfig.AUDIO.vibration.double_interval).timeout
+	vibrate(GameConfig.AUDIO.vibration.long)
 	level_completed.emit(current_level)
-	_save_progress()
+	save_progress()
 
 ## 保存进度
-func _save_progress() -> void:
+func save_progress() -> void:
 	SaveManager.save_game({
 		"current_level": current_level,
 		"settings": settings,
@@ -95,7 +102,7 @@ func set_start_level(level: int) -> void:
 	if level < 1:
 		level = 1
 	settings.start_level = level
-	_save_progress()
+	save_progress()
 	print("起始关卡已设置为: ", level)
 
 ## 加载设置
@@ -107,8 +114,8 @@ func _load_settings() -> void:
 		if settings.has("sound_volume"):
 			var vol = settings.sound_volume
 			if vol <= 0.0 or vol > 1.0:
-				settings.sound_volume = 0.8
-				print("音量值无效，重置为默认值: 0.8")
+				settings.sound_volume = GameConfig.AUDIO.default_volume
+				print("音量值无效，重置为默认值: ", GameConfig.AUDIO.default_volume)
 		# 验证起始关卡有效
 		if settings.has("start_level"):
 			var start_lvl = settings.start_level
@@ -131,13 +138,28 @@ func play_sound(type: String) -> void:
 		"select":
 			player.stream = select_sound
 		"move":
-			player.stream = _generate_tone(523.0, 0.15, 0.2)
+			player.stream = _generate_tone(
+				GameConfig.AUDIO.frequencies.move,
+				GameConfig.AUDIO.durations.move,
+				GameConfig.AUDIO.volumes.move
+			)
 		"success":
-			player.stream = _generate_tone(880.0, 0.3, 0.4)
+			player.stream = _generate_tone(
+				GameConfig.AUDIO.frequencies.success,
+				GameConfig.AUDIO.durations.success,
+				GameConfig.AUDIO.volumes.success
+			)
 		"fail":
-			player.stream = _generate_tone(200.0, 0.2, 0.3)
+			player.stream = _generate_tone(
+				GameConfig.AUDIO.frequencies.fail,
+				GameConfig.AUDIO.durations.fail,
+				GameConfig.AUDIO.volumes.fail
+			)
 		"pop":
-			player.stream = _generate_noise(0.1, 0.3)
+			player.stream = _generate_noise(
+				GameConfig.AUDIO.durations.pop,
+				GameConfig.AUDIO.volumes.pop
+			)
 		"collision":
 			player.stream = collision_sound
 		"death":
@@ -191,7 +213,7 @@ func _init_bgm_player() -> void:
 	bgm_player = AudioStreamPlayer.new()
 	bgm_player.bus = "Master"
 	# 防止 volume 为 0 时 linear_to_db 返回 -INF
-	var vol = max(settings.sound_volume, 0.001)
+	var vol = max(settings.sound_volume, GameConfig.AUDIO.min_volume_threshold)
 	bgm_player.volume_db = linear_to_db(vol)
 	bgm_player.finished.connect(_on_bgm_finished)
 	add_child(bgm_player)
@@ -199,11 +221,9 @@ func _init_bgm_player() -> void:
 
 ## 动态加载 BGM 目录下的所有音频文件
 func _load_bgm_tracks() -> void:
-	# 使用文件列表方式，避免 DirAccess 在安卓上可能的问题
-	var bgm_files: Array[String] = [
-		"res://source/sound/bgm/bg_1.wav",
-		"res://source/sound/bgm/bg_2.wav",
-	]
+	# 使用配置中的文件列表
+	var bgm_files: Array[String] = []
+	bgm_files.assign(GameConfig.RESOURCES.bgm_tracks)
 	
 	for path in bgm_files:
 		if ResourceLoader.exists(path):
@@ -259,13 +279,9 @@ func _on_bgm_finished() -> void:
 
 ## 动态加载背景图片
 func _load_bg_images() -> void:
-	# 使用文件列表方式，避免 DirAccess 在安卓上可能的问题
-	var bg_files: Array[String] = [
-		"res://source/images/backgroup/bg_1.png",
-		"res://source/images/backgroup/bg_2.png",
-		"res://source/images/backgroup/bg_3.png",
-		"res://source/images/backgroup/bg_4.png",
-	]
+	# 使用配置中的文件列表
+	var bg_files: Array[String] = []
+	bg_files.assign(GameConfig.RESOURCES.background_images)
 	
 	for path in bg_files:
 		if ResourceLoader.exists(path):

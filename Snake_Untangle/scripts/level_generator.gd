@@ -4,11 +4,11 @@
 class_name LevelGenerator
 extends Node
 
-# 配置参数
-const BASE_GRID_SIZE: int = 10  # 基础网格大小（第一关）
-const MIN_WORM_SEGMENTS: int = 5  # 最小长度增加，让小虫更长
-const MAX_WORM_SEGMENTS: int = 15  # 最大长度增加，让小虫更长
-const MIN_COVERAGE: float = 0.7  # 最小覆盖率（70%的网格被占用）
+# 配置参数（从 GameConfig 读取，使用 static var 避免加载顺序问题）
+static var BASE_GRID_SIZE: int = GameConfig.GAMEPLAY.base_grid_size
+static var MIN_WORM_SEGMENTS: int = GameConfig.GAMEPLAY.min_worm_segments
+static var MAX_WORM_SEGMENTS: int = GameConfig.GAMEPLAY.max_worm_segments
+static var MIN_COVERAGE: float = GameConfig.GAMEPLAY.min_grid_coverage
 
 # 难度参数
 var grid_width: int = 10
@@ -33,12 +33,7 @@ func _set_difficulty(level: int) -> void:
 	grid_height = grid_width
 	
 	# 根据关卡数设置复杂度（影响交叉程度）
-	if level <= 5:
-		complexity = 0.3
-	elif level <= 15:
-		complexity = 0.5
-	else:
-		complexity = 0.7
+	complexity = GameConfig.get_complexity(level)
 	
 	# 小虫数量不再固定，而是根据覆盖率动态生成
 	worm_count = 0  # 将在生成时动态计算
@@ -50,7 +45,7 @@ func set_grid_height(height: int) -> void:
 ## 生成关卡数据
 ## 优化：使用迭代替代递归，避免栈溢出
 func generate_level(_screen_size: Vector2) -> Array[Dictionary]:
-	var max_attempts = 100  # 最大尝试次数，防止无限循环
+	var max_attempts = GameConfig.GAMEPLAY.path_generation.max_generation_attempts
 	var attempt = 0
 	
 	while attempt < max_attempts:
@@ -124,7 +119,7 @@ func _generate_solved_state() -> Array[Dictionary]:
 ## 随机寻找一个空闲位置（避开最外层）- 快速版
 func _find_random_free_position_fast(occupied: Dictionary) -> Vector2i:
 	var attempts = 0
-	var max_attempts = 100
+	var max_attempts = GameConfig.GAMEPLAY.path_generation.max_placement_attempts
 	
 	while attempts < max_attempts:
 		attempts += 1
@@ -166,8 +161,8 @@ func _generate_worm_path_fast(start: Vector2i, occupied: Dictionary) -> Array[Ve
 	while path.size() < target_length and attempts < max_attempts:
 		attempts += 1
 		
-		# 30%概率转弯
-		if randf() < 0.3:
+		# 根据配置概率转弯
+		if randf() < GameConfig.GAMEPLAY.path_generation.turn_probability:
 			current_dir = _get_turn_direction(current_dir)
 		
 		var next = current + current_dir

@@ -19,14 +19,15 @@ static var GRID_SIZE: float = 40.0    # 基准网格尺寸（正方形）
 static var GRID_HEIGHT: int = 10      # 高度方向网格数量
 static var FIRST_ROW_EXTRA: float = 0.0  # 第一行额外高度
 static var LAST_ROW_EXTRA: float = 0.0   # 最后一行额外高度
-const MIN_SEGMENTS: int = 5  # 最小长度
-const MAX_SEGMENTS: int = 15  # 最大长度
+# 长度限制（从配置读取，使用 static var 避免加载顺序问题）
+static var MIN_SEGMENTS: int = GameConfig.GAMEPLAY.min_worm_segments
+static var MAX_SEGMENTS: int = GameConfig.GAMEPLAY.max_worm_segments
 
-# 小虫身体段大小（相对于框格尺寸的比例）
-const HEAD_SIZE_RATIO: float = 0.8  # 头部大小占框格的80%
-const BODY_SIZE_RATIO: float = 0.6  # 身体大小占框格的60%
-const TAIL_SIZE_RATIO: float = 0.4  # 尾部大小占框格的40%
-const TOUCH_PADDING_RATIO: float = 0.3  # 触摸边距占框格的30%
+# 小虫身体段大小（从配置读取）
+static var HEAD_SIZE_RATIO: float = GameConfig.VISUAL.head_size_ratio
+static var BODY_SIZE_RATIO: float = GameConfig.VISUAL.body_size_ratio
+static var TAIL_SIZE_RATIO: float = GameConfig.VISUAL.tail_size_ratio
+static var TOUCH_PADDING_RATIO: float = GameConfig.VISUAL.touch_padding_ratio
 
 # 动态计算的身体段大小（根据框格尺寸）
 var HEAD_SIZE: float = 32.0
@@ -34,8 +35,9 @@ var BODY_SIZE: float = 24.0
 var TAIL_SIZE: float = 16.0
 var TOUCH_PADDING: float = 15.0
 
-# 颜色预设（霓虹色）
-static var NEON_COLORS: Array[Color] = [
+# 颜色预设（直接定义，避免循环依赖）
+# 注意：如需修改颜色，请编辑 scripts/config/game_config.gd 中的 VISUAL.neon_colors
+const NEON_COLORS: Array[Color] = [
 	Color(1.0, 0.5, 0.0),   # 橙色
 	Color(0.0, 0.8, 1.0),   # 青色
 	Color(1.0, 0.2, 0.6),   # 粉色
@@ -68,7 +70,7 @@ var is_highlighted: bool = false
 # 移动相关
 var is_moving: bool = false
 var move_timer: float = 0.0
-const MOVE_INTERVAL: float = 0.15  # 每格移动间隔（秒）
+static var MOVE_INTERVAL: float = GameConfig.GAMEPLAY.move_interval  # 每格移动间隔（秒）
 var move_history: Array[Vector2i] = []  # 移动历史记录（用于反弹）
 
 # 包围盒缓存
@@ -217,7 +219,7 @@ func _update_head_triangle() -> void:
 	var dir = Vector2(move_direction.x, move_direction.y).normalized()
 	
 	# 创建三角形箭头，指向移动方向
-	var arrow_size = HEAD_SIZE * 0.6
+	var arrow_size = HEAD_SIZE * GameConfig.VISUAL.head_arrow_size_ratio
 	var perp = Vector2(-dir.y, dir.x)  # 垂直方向
 	
 	var triangle_points: PackedVector2Array = [
@@ -512,11 +514,11 @@ func set_free_end_state(is_free: bool) -> void:
 	is_free_end = is_free
 	
 	if is_free:
-		modulate = Color(1.5, 1.5, 1.5, 1.0)
+		modulate = GameConfig.VISUAL.free_end_highlight
 		if head_triangle:
-			head_triangle.color = Color.WHITE
+			head_triangle.color = GameConfig.VISUAL.free_end_normal
 	else:
-		modulate = Color(0.8, 0.8, 0.8, 1.0)
+		modulate = GameConfig.VISUAL.blocked_dim
 		if head_triangle:
 			head_triangle.color = worm_color.darkened(0.3)
 
@@ -536,7 +538,7 @@ func try_move() -> bool:
 	move_timer = 0.0
 	move_started.emit(self)
 	
-	GameManager.vibrate(10)
+	GameManager.vibrate(GameConfig.AUDIO.vibration.short)
 	GameManager.play_sound("move")
 	
 	return true
@@ -562,7 +564,7 @@ func start_reverse() -> void:
 	_update_visuals()
 	_update_bounding_box()
 	
-	GameManager.vibrate(50)
+	GameManager.vibrate(GameConfig.AUDIO.vibration.extra_long)
 	GameManager.play_sound("fail")
 	
 	move_reversed.emit(self)
@@ -668,7 +670,7 @@ func play_remove_animation() -> void:
 	tween.set_trans(Tween.TRANS_QUAD)
 	
 	# 淡出
-	tween.tween_property(self, "modulate:a", 0.0, 0.3)
+	tween.tween_property(self, "modulate:a", 0.0, GameConfig.TIMING.remove_animation_duration)
 	
 	await tween.finished
 	queue_free()

@@ -56,10 +56,10 @@ func _ready() -> void:
 ## 更新游戏UI
 func update_game_ui(data: Dictionary) -> void:
 	if data.has("level") and level_label:
-		level_label.text = "Level %d" % data.level
+		level_label.text = GameConfig.UI.hud.level_label_format % data.level
 	
 	if data.has("remaining") and remaining_label:
-		remaining_label.text = "🐍 × %d" % data.remaining
+		remaining_label.text = GameConfig.UI.hud.remaining_label_format % data.remaining
 
 ## 显示胜利界面
 func show_victory() -> void:
@@ -69,7 +69,7 @@ func show_victory() -> void:
 	var tween = create_tween()
 	flash_effect.visible = true
 	flash_effect.modulate = Color(1, 1, 1, 1)
-	tween.tween_property(flash_effect, "modulate", Color(1, 1, 1, 0), 0.5)
+	tween.tween_property(flash_effect, "modulate", Color(1, 1, 1, 0), GameConfig.TIMING.level_complete_flash)
 	tween.tween_callback(func(): flash_effect.visible = false)
 
 # 按钮回调
@@ -212,8 +212,8 @@ func _create_settings_menu() -> void:
 	panel.set_anchors_preset(Control.PRESET_CENTER)
 	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	# 使用相对尺寸而非绝对像素
-	panel.custom_minimum_size = Vector2(400, 400)
+	# 使用配置中的尺寸
+	panel.custom_minimum_size = GameConfig.UI.settings_menu.min_size
 	settings_menu.add_child(panel)
 	
 	# 创建垂直容器来管理所有元素
@@ -228,7 +228,7 @@ func _create_settings_menu() -> void:
 	title_label.name = "TitleLabel"
 	title_label.text = "游戏设置"
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_label.add_theme_font_size_override("font_size", 36)
+	title_label.add_theme_font_size_override("font_size", GameConfig.UI.settings_menu.title_font_size)
 	vbox.add_child(title_label)
 	
 	# 起始关卡标签
@@ -236,7 +236,7 @@ func _create_settings_menu() -> void:
 	level_title.name = "LevelTitle"
 	level_title.text = "起始关卡"
 	level_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	level_title.add_theme_font_size_override("font_size", 28)
+	level_title.add_theme_font_size_override("font_size", GameConfig.UI.settings_menu.subtitle_font_size)
 	vbox.add_child(level_title)
 	
 	# 当前关卡显示
@@ -244,13 +244,13 @@ func _create_settings_menu() -> void:
 	level_value.name = "LevelValue"
 	level_value.text = str(GameManager.get_start_level())
 	level_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	level_value.add_theme_font_size_override("font_size", 48)
+	level_value.add_theme_font_size_override("font_size", GameConfig.UI.settings_menu.value_font_size)
 	vbox.add_child(level_value)
 	
 	# 按钮容器（水平布局）
 	var button_container = HBoxContainer.new()
 	button_container.name = "ButtonContainer"
-	button_container.add_theme_constant_override("separation", 20)
+	button_container.add_theme_constant_override("separation", GameConfig.UI.settings_menu.button_separation)
 	vbox.add_child(button_container)
 	
 	# 左侧占位
@@ -262,8 +262,8 @@ func _create_settings_menu() -> void:
 	var minus_btn = Button.new()
 	minus_btn.name = "MinusButton"
 	minus_btn.text = "-"
-	minus_btn.custom_minimum_size = Vector2(60, 60)
-	minus_btn.add_theme_font_size_override("font_size", 32)
+	minus_btn.custom_minimum_size = GameConfig.UI.settings_menu.button_min_size
+	minus_btn.add_theme_font_size_override("font_size", GameConfig.UI.settings_menu.button_font_size)
 	minus_btn.pressed.connect(_on_level_minus)
 	button_container.add_child(minus_btn)
 	
@@ -271,8 +271,8 @@ func _create_settings_menu() -> void:
 	var plus_btn = Button.new()
 	plus_btn.name = "PlusButton"
 	plus_btn.text = "+"
-	plus_btn.custom_minimum_size = Vector2(60, 60)
-	plus_btn.add_theme_font_size_override("font_size", 32)
+	plus_btn.custom_minimum_size = GameConfig.UI.settings_menu.button_min_size
+	plus_btn.add_theme_font_size_override("font_size", GameConfig.UI.settings_menu.button_font_size)
 	plus_btn.pressed.connect(_on_level_plus)
 	button_container.add_child(plus_btn)
 	
@@ -286,7 +286,7 @@ func _create_settings_menu() -> void:
 	desc_label.name = "DescLabel"
 	desc_label.text = "设置后点击'开始新游戏'\n将从该关卡开始"
 	desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	desc_label.add_theme_font_size_override("font_size", 20)
+	desc_label.add_theme_font_size_override("font_size", GameConfig.UI.settings_menu.desc_font_size)
 	vbox.add_child(desc_label)
 	
 	# 底部占位
@@ -298,8 +298,8 @@ func _create_settings_menu() -> void:
 	var back_btn = Button.new()
 	back_btn.name = "BackButton"
 	back_btn.text = "返回主菜单"
-	back_btn.custom_minimum_size = Vector2(200, 50)
-	back_btn.add_theme_font_size_override("font_size", 28)
+	back_btn.custom_minimum_size = GameConfig.UI.settings_menu.back_button_min_size
+	back_btn.add_theme_font_size_override("font_size", GameConfig.UI.settings_menu.subtitle_font_size)
 	back_btn.pressed.connect(_on_settings_back)
 	vbox.add_child(back_btn)
 	
@@ -318,7 +318,7 @@ func _on_level_minus() -> void:
 func _on_level_plus() -> void:
 	GameManager.play_sound("select")
 	var current = GameManager.get_start_level()
-	if current < 999:
+	if current < GameConfig.UI.max_start_level:
 		GameManager.set_start_level(current + 1)
 		_update_settings_level_display()
 

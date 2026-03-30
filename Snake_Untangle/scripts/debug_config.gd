@@ -55,7 +55,11 @@ static var QUICK_CLEAR_MODE: bool = false
 
 ## 使用固定随机种子（便于复现问题）
 static var USE_FIXED_SEED: bool = false
+# 在 _ready 中初始化以避免加载顺序问题
 static var FIXED_SEED: int = 12345
+
+func _ready() -> void:
+	FIXED_SEED = GameConfig.DEBUG.default_seed
 
 # ============================================
 # 辅助方法

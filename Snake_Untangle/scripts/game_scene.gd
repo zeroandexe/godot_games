@@ -324,7 +324,7 @@ func _handle_touch(pos: Vector2) -> void:
 			GameManager.worm_moved.emit(clicked_worm, true)
 	elif clicked_worm and not clicked_worm.is_free_end:
 		# 点击了不可移动的虫子
-		GameManager.vibrate(20)
+		GameManager.vibrate(GameConfig.AUDIO.vibration.medium)
 		_show_blocked_hint(clicked_worm)
 
 ## 检查点击是否在移动方向上
@@ -338,24 +338,24 @@ func _is_click_in_direction(worm: Worm, click_pos: Vector2) -> bool:
 	# 计算点积（判断方向是否一致）
 	var dot = click_dir.dot(dir)
 	
-	# 如果点击方向与移动方向大致相同（允许45度偏差）
-	return dot > 0.7
+	# 如果点击方向与移动方向大致相同（根据配置阈值）
+	return dot > GameConfig.GAMEPLAY.direction_dot_threshold
 
 ## 显示方向提示
 func _show_direction_hint(worm: Worm) -> void:
 	# 创建闪烁效果提示玩家点击箭头方向
 	var tween = create_tween()
-	tween.set_loops(3)
-	tween.tween_property(worm, "modulate", Color(1.5, 1.5, 0.5, 1.0), 0.1)
-	tween.tween_property(worm, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.1)
+	tween.set_loops(GameConfig.TIMING.direction_hint_loops)
+	tween.tween_property(worm, "modulate", GameConfig.VISUAL.direction_hint, GameConfig.TIMING.direction_hint_duration)
+	tween.tween_property(worm, "modulate", GameConfig.VISUAL.free_end_normal, GameConfig.TIMING.direction_hint_duration)
 
 ## 显示被阻挡提示
 func _show_blocked_hint(worm: Worm) -> void:
 	# 创建闪烁效果提示玩家这条虫子被阻挡
 	var tween = create_tween()
-	tween.set_loops(2)
-	tween.tween_property(worm, "modulate", Color(1.5, 0.3, 0.3, 0.8), 0.15)
-	tween.tween_property(worm, "modulate", Color(0.6, 0.6, 0.6, 0.5), 0.15)
+	tween.set_loops(GameConfig.TIMING.blocked_hint_loops)
+	tween.tween_property(worm, "modulate", GameConfig.VISUAL.blocked_hint, GameConfig.TIMING.blocked_hint_duration)
+	tween.tween_property(worm, "modulate", GameConfig.VISUAL.blocked_dim, GameConfig.TIMING.blocked_hint_duration)
 
 ## 获取位置处的虫子
 ## 优化：使用预排序的数组，避免每次点击都复制和排序
@@ -446,9 +446,9 @@ func _play_success_effect(worm: Worm) -> void:
 	particles.position = worm.get_head_position()
 	particles.emitting = true
 	
-	GameManager.vibrate(30)
-	await get_tree().create_timer(0.1).timeout
-	GameManager.vibrate(30)
+	GameManager.vibrate(GameConfig.AUDIO.vibration.long)
+	await get_tree().create_timer(GameConfig.AUDIO.vibration.double_interval).timeout
+	GameManager.vibrate(GameConfig.AUDIO.vibration.long)
 
 ## 关卡完成
 func _level_completed() -> void:
@@ -458,9 +458,12 @@ func _level_completed() -> void:
 	_show_victory_ui()
 	
 	# 延迟进入下一关
-	await get_tree().create_timer(2.0).timeout
+	await get_tree().create_timer(GameConfig.TIMING.level_complete_delay).timeout
 	
 	GameManager.current_level += 1
+	
+	# 保存新的关卡进度（关键：进入新关卡后立即保存）
+	GameManager.save_progress()
 	
 	# 重新创建关卡生成器以获取新的网格宽度
 	level_generator = LevelGenerator.new(GameManager.current_level)
@@ -585,8 +588,8 @@ func _draw_grid_lines() -> void:
 	# 绘制垂直线（垂直线不受高度调整影响）
 	for x in range(grid_width + 1):
 		var line = Line2D.new()
-		line.width = 1.0
-		line.default_color = Color(0.2, 0.2, 0.2, 0.3)  # 很淡的灰色
+		line.width = GameConfig.VISUAL.grid_line_width
+		line.default_color = GameConfig.VISUAL.grid_line_color
 		
 		var points: PackedVector2Array = []
 		points.append(Vector2(x * Worm.GRID_SIZE_X, 0))
@@ -600,8 +603,8 @@ func _draw_grid_lines() -> void:
 	
 	for y in range(grid_height + 1):
 		var line = Line2D.new()
-		line.width = 1.0
-		line.default_color = Color(0.2, 0.2, 0.2, 0.3)
+		line.width = GameConfig.VISUAL.grid_line_width
+		line.default_color = GameConfig.VISUAL.grid_line_color
 		
 		var points: PackedVector2Array = []
 		points.append(Vector2(0, current_y))
@@ -631,8 +634,8 @@ func _draw_game_area_border() -> void:
 	
 	var border = Line2D.new()
 	border.name = "GameAreaBorder"
-	border.width = 3.0
-	border.default_color = Color(0.5, 0.5, 0.5, 0.5)  # 半透明灰色
+	border.width = GameConfig.VISUAL.game_area_border_width
+	border.default_color = GameConfig.VISUAL.game_area_border_color
 	
 	# 游戏区域就是整个屏幕
 	var top_left = Vector2(0, 0)

@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+GameConfig="*res://scripts/config/game_config.gd"
 DebugConfig="*res://scripts/debug_config.gd"
 GameManager="*res://scripts/game_manager.gd"
 SaveManager="*res://scripts/save_manager.gd"

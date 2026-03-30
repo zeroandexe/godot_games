@@ -3,8 +3,8 @@
 
 extends Node
 
-const SAVE_PATH: String = "user://save.json"
-const BACKUP_PATH: String = "user://save_backup.json"
+static var SAVE_PATH: String = GameConfig.SAVE.save_path
+static var BACKUP_PATH: String = GameConfig.SAVE.backup_path
 
 ## 保存游戏数据
 func save_game(data: Dictionary) -> bool:

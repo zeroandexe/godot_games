@@ -442,13 +442,37 @@ func _on_worm_removed(worm: Worm) -> void:
 
 ## 播放成功效果
 func _play_success_effect(worm: Worm) -> void:
-	# 粒子效果
-	particles.position = worm.get_head_position()
-	particles.emitting = true
+	# 在小虫身体的所有网格位置播放粒子效果
+	var positions = worm.grid_positions
+	
+	# 为身体的每个段都创建独立的粒子效果
+	for pos in positions:
+		var world_pos = worm._grid_to_world(pos)
+		_spawn_particles_at(world_pos)
 	
 	GameManager.vibrate(GameConfig.AUDIO.vibration.long)
-	await get_tree().create_timer(GameConfig.AUDIO.vibration.double_interval).timeout
-	GameManager.vibrate(GameConfig.AUDIO.vibration.long)
+
+## 在指定位置生成一次性粒子效果
+func _spawn_particles_at(pos: Vector2) -> void:
+	# 创建临时粒子节点
+	var temp_particles = GPUParticles2D.new()
+	
+	# 复制原粒子的材质参数
+	if particles.process_material:
+		temp_particles.process_material = particles.process_material.duplicate()
+	temp_particles.amount = particles.amount
+	temp_particles.lifetime = particles.lifetime
+	temp_particles.one_shot = true
+	temp_particles.explosiveness = particles.explosiveness
+	temp_particles.position = pos
+	
+	add_child(temp_particles)
+	temp_particles.emitting = true
+	
+	# 粒子播放完后自动清理
+	await get_tree().create_timer(particles.lifetime + 0.1).timeout
+	if is_instance_valid(temp_particles):
+		temp_particles.queue_free()
 
 ## 关卡完成
 func _level_completed() -> void:

@@ -235,7 +235,7 @@ static func get_random_color() -> Color:
 	return colors[randi() % colors.size()]
 
 ## 获取指定难度的复杂度
-static func get_complexity(level: int) -> float:
+func get_complexity(level: int) -> float:
 	var diff = GAMEPLAY.difficulty
 	if level <= diff.easy_levels:
 		return diff.easy_complexity

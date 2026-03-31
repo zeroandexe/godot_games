@@ -242,11 +242,23 @@ func _update_collision_shape_points() -> void:
 	if _cached_collision_shape == null or grid_positions.is_empty():
 		return
 	
+	var n = grid_positions.size()
+	
+	# 当虫子太短时使用简单的圆形碰撞（避免凸分解失败）
+	if n < 2:
+		var center = _grid_to_world(grid_positions[0])
+		var radius = HEAD_SIZE * 0.5
+		# 创建八边形近似圆形
+		var circle_points: PackedVector2Array = []
+		for j in range(8):
+			var angle = j * PI / 4
+			circle_points.append(center + Vector2(cos(angle), sin(angle)) * radius)
+		_cached_collision_shape.polygon = circle_points
+		return
+	
 	# 创建覆盖连续身体的碰撞区域
 	var collision_points: PackedVector2Array = []
-	collision_points.resize(grid_positions.size() * 2)
-	
-	var n = grid_positions.size()
+	collision_points.resize(n * 2)
 	
 	# 沿身体线段创建碰撞多边形（上半部分 + 下半部分，一次遍历）
 	for i in range(n):
@@ -254,20 +266,36 @@ func _update_collision_shape_points() -> void:
 		var center = _grid_to_world(grid_pos)
 		var radius = lerp(HEAD_SIZE * 0.5, TAIL_SIZE * 0.5, float(i) / max(1, n - 1))
 		
-		# 获取线段方向
+		# 获取线段方向（添加安全检查）
 		var dir: Vector2
 		if i == 0:
-			dir = (_grid_to_world(grid_positions[0]) - _grid_to_world(grid_positions[1])).normalized()
+			var to_next = _grid_to_world(grid_positions[1]) - center
+			if to_next.length_squared() < 0.001:
+				dir = Vector2.RIGHT
+			else:
+				dir = to_next.normalized()
 		elif i == n - 1:
-			dir = (_grid_to_world(grid_positions[i]) - _grid_to_world(grid_positions[i - 1])).normalized()
+			var to_prev = _grid_to_world(grid_positions[i - 1]) - center
+			if to_prev.length_squared() < 0.001:
+				dir = Vector2.RIGHT
+			else:
+				dir = -(center - _grid_to_world(grid_positions[i - 1])).normalized()
 		else:
-			dir = (_grid_to_world(grid_positions[i + 1]) - _grid_to_world(grid_positions[i - 1])).normalized()
+			var prev_pos = _grid_to_world(grid_positions[i - 1])
+			var next_pos = _grid_to_world(grid_positions[i + 1])
+			var diff = next_pos - prev_pos
+			if diff.length_squared() < 0.001:
+				dir = Vector2.RIGHT
+			else:
+				dir = diff.normalized()
 		
 		var perp = dir.orthogonal()
 		collision_points[i] = center + perp * radius  # 上半部分
 		collision_points[n * 2 - 1 - i] = center - perp * radius  # 下半部分（反向）
 	
-	_cached_collision_shape.polygon = collision_points
+	# 确保至少有3个点才能形成有效多边形
+	if collision_points.size() >= 3:
+		_cached_collision_shape.polygon = collision_points
 
 ## 更新碰撞形状（兼容旧调用）
 func _update_collision_shape() -> void:

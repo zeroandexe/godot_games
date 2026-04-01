@@ -6,7 +6,7 @@ extends CanvasLayer
 # 游戏HUD
 @onready var hud: Control = $HUD
 @onready var level_label: Label = $HUD/TopBar/LevelLabel
-@onready var remaining_label: Label = $HUD/TopBar/RemainingLabel
+@onready var remaining_label: Label = $HUD/TopBar/RemainingLabel/CountLabel
 @onready var score_label: Label = $HUD/BottomBar/ScoreLabel
 
 # 菜单

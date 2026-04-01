@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://cwoxfic7h8mxi" path="res://scripts/ui_layer.gd" id="2_qwerty"]
 [ext_resource type="Texture2D" uid="uid://b54hue5nvvua5" path="res://source/images/backgroup/bg_1.png" id="3_bg1"]
 [ext_resource type="Texture2D" path="res://source/images/icon/bomb.png" id="4_bomb"]
+[ext_resource type="Texture2D" path="res://source/images/icon/snake.png" id="5_snake"]
 
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 1
@@ -96,10 +97,21 @@ text = "Level 1"
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="RemainingLabel" type="Label" parent="UILayer/HUD/TopBar" unique_id=1109929049]
+[node name="RemainingLabel" type="HBoxContainer" parent="UILayer/HUD/TopBar" unique_id=1109929049]
+layout_mode = 2
+theme_override_constants/separation = 5
+alignment = 2
+
+[node name="SnakeIcon" type="TextureRect" parent="UILayer/HUD/TopBar/RemainingLabel" unique_id=1884155431]
+layout_mode = 2
+texture = ExtResource("5_snake")
+expand_mode = 2
+custom_minimum_size = Vector2(32, 32)
+
+[node name="CountLabel" type="Label" parent="UILayer/HUD/TopBar/RemainingLabel" unique_id=1212998920]
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
-text = "🐍 × 5"
+text = "5"
 horizontal_alignment = 2
 
 [node name="BottomBar" type="Control" parent="UILayer/HUD" unique_id=2108321519]

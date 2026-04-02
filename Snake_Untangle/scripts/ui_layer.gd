@@ -17,8 +17,8 @@ extends CanvasLayer
 var settings_menu: Control = null
 var temp_start_level: int = 1
 
-# 特效
-@onready var flash_effect: ColorRect = $Effects/FlashEffect
+# 特效（在 EffectsLayer 中）
+@onready var flash_effect: ColorRect = get_node_or_null("/root/Main/EffectsLayer/Effects/FlashEffect")
 
 var game_scene: Node2D = null
 var game_background: TextureRect = null
@@ -73,6 +73,7 @@ func update_game_ui(data: Dictionary) -> void:
 func show_victory() -> void:
 	# 直接显示胜利菜单，无动画效果，让玩家可以快速点击进入下一关
 	victory_menu.visible = true
+	# HUD保持可见显示分数，但VictoryMenu的Overlay会拦截输入
 
 # 按钮回调
 func _set_game_background_visible(show_bg: bool) -> void:

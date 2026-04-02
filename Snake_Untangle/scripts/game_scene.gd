@@ -313,7 +313,7 @@ func _input(event: InputEvent) -> void:
 	if not is_input_enabled:
 		return
 	
-	# 触摸/鼠标处理
+	# 触摸/鼠标处理 - 只处理按下事件，UI按钮会在_gui_input中处理
 	if event is InputEventScreenTouch or event is InputEventMouseButton:
 		if event.pressed:
 			var touch_pos = get_global_mouse_position()
@@ -455,27 +455,89 @@ func _on_worm_removed(worm: Worm) -> void:
 		# 重新启用输入并更新状态
 		is_input_enabled = true
 		_update_free_end_status()
+	
+	# 通知 BombButton 手动消除了虫子（重置连续爆炸次数）
+	_notify_bomb_button_manual_remove()
 
 ## 播放成功效果
 func _play_success_effect(worm: Worm) -> void:
 	# 在小虫身体的所有网格位置播放粒子效果
 	var positions = worm.grid_positions
 	
-	# 为身体的每个段都创建独立的粒子效果
+	# 为身体的每个段都创建独立的粒子效果（使用虫子身体颜色）
 	for pos in positions:
 		var world_pos = worm._grid_to_world(pos)
-		_spawn_particles_at(world_pos)
+		_spawn_particles_at(world_pos, worm.worm_color)
 	
 	GameManager.vibrate(GameConfig.AUDIO.vibration.long)
 
+## 通知 BombButton 手动消除了虫子
+func _notify_bomb_button_manual_remove() -> void:
+	var bomb_button = get_node_or_null("/root/Main/UILayer/HUD/BottomBar/BombButton")
+	if bomb_button and bomb_button.has_method("notify_manual_worm_removed"):
+		bomb_button.notify_manual_worm_removed()
+
+## 炸弹爆炸移除一只虫子（不加分，重置倍率，不触发手动移除通知）
+func remove_worm_by_bomb() -> void:
+	# 找到一只可以移除的虫子（优先 IDLE 状态的）
+	var target_worm: Worm = null
+	for worm in worms:
+		if worm.current_state == Worm.State.IDLE:
+			target_worm = worm
+			break
+	
+	if target_worm == null:
+		print("[GameScene] 没有可移除的虫子")
+		return
+	
+	print("[GameScene] 炸弹移除虫子: ", target_worm.worm_id)
+	
+	# 重置倍率为 1
+	GameManager.combo_multiplier = 1
+	print("[GameScene] 倍率已重置为 1")
+	
+	# 移除虫子（不加分）
+	# 移除对应的箭头
+	var arrow = direction_arrows.get(target_worm.worm_id)
+	if arrow:
+		arrow.queue_free()
+	direction_arrows.erase(target_worm.worm_id)
+	
+	# 从数组中移除
+	worms.erase(target_worm)
+	
+	# 减少计数
+	GameManager.remaining_worms = max(0, GameManager.remaining_worms - 1)
+	
+	# 标记脏标记
+	_free_end_dirty = true
+	
+	# 更新UI（显示倍率重置）
+	_update_ui()
+	
+	# 播放移除动画和粒子效果
+	_play_success_effect(target_worm)
+	target_worm.play_remove_animation()
+	
+	# 检查胜利条件
+	if GameManager.remaining_worms <= 0:
+		_level_completed()
+	else:
+		_update_free_end_status()
+
 ## 在指定位置生成一次性粒子效果
-func _spawn_particles_at(pos: Vector2) -> void:
+func _spawn_particles_at(pos: Vector2, particle_color: Color = Color(1.0, 1.0, 1.0)) -> void:
 	# 创建临时粒子节点
 	var temp_particles = GPUParticles2D.new()
 	
 	# 复制原粒子的材质参数
 	if particles.process_material:
 		temp_particles.process_material = particles.process_material.duplicate()
+		# 设置粒子颜色为虫子身体颜色
+		var particle_mat = temp_particles.process_material as ParticleProcessMaterial
+		if particle_mat:
+			particle_mat.color = particle_color
+	
 	temp_particles.amount = particles.amount
 	temp_particles.lifetime = particles.lifetime
 	temp_particles.one_shot = true

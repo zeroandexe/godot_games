@@ -37,6 +37,8 @@ var combo_multiplier: int = 1  # 连击倍率，初始为1
 var collision_sound: AudioStream
 var death_sound: AudioStream
 var select_sound: AudioStream
+var bomb_shot_sound: AudioStream
+var bomb_boom_sound: AudioStream
 
 # BGM
 var bgm_player: AudioStreamPlayer
@@ -64,6 +66,8 @@ func _load_sound_effects() -> void:
 	collision_sound = load(GameConfig.RESOURCES.sound_effects.collision)
 	death_sound = load(GameConfig.RESOURCES.sound_effects.death)
 	select_sound = load(GameConfig.RESOURCES.sound_effects.select)
+	bomb_shot_sound = load(GameConfig.RESOURCES.sound_effects.bomb_shot)
+	bomb_boom_sound = load(GameConfig.RESOURCES.sound_effects.bomb_boom)
 
 ## 震动反馈
 func vibrate(duration_ms: int) -> void:
@@ -140,6 +144,10 @@ func play_sound(type: String) -> void:
 	match type:
 		"select":
 			player.stream = select_sound
+		"bomb_shot":
+			player.stream = bomb_shot_sound
+		"bomb_boom":
+			player.stream = bomb_boom_sound
 		"move":
 			player.stream = _generate_tone(
 				GameConfig.AUDIO.frequencies.move,
@@ -304,7 +312,22 @@ func _load_bg_images() -> void:
 	print("背景图片总数: ", bg_images.size())
 
 ## 获取随机背景图片（不重复，全部用完一轮后重置）
+## 调试模式下优先使用 DEBUG_BACKGROUND_PATH 指定的图片
 func get_random_background() -> Texture2D:
+	# 调试模式：强制使用指定背景图片
+	if DebugConfig.DEBUG_BACKGROUND_PATH != "":
+		var debug_path = DebugConfig.DEBUG_BACKGROUND_PATH
+		if ResourceLoader.exists(debug_path):
+			var texture = load(debug_path) as Texture2D
+			if texture:
+				print("[GameManager] [调试模式] 使用指定背景图片: ", debug_path)
+				return texture
+			else:
+				push_warning("[调试模式] 调试背景图片加载失败（类型不匹配）: " + debug_path)
+		else:
+			push_warning("[调试模式] 调试背景图片路径不存在: " + debug_path)
+	
+	# 正常随机选择
 	if bg_images.is_empty():
 		return null
 	if bg_remaining_count == 0:

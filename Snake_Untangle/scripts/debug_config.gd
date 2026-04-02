@@ -49,6 +49,17 @@ static var SHOW_LEVEL_SOLUTION: bool = false
 ## 快速过关模式（点击任意虫子即可过关）
 static var QUICK_CLEAR_MODE: bool = false
 
+## 炸弹无限使用模式（不检查分数，不消耗分数）
+static var INFINITE_BOMB_MODE: bool = true
+
+# ============================================
+# 背景图片调试
+# ============================================
+
+## 强制使用指定背景图片（用于调试新背景）
+## 设置为空字符串 "" 则使用随机背景
+static var DEBUG_BACKGROUND_PATH: String = "res://source/images/backgroup/bg_9.png"
+
 # ============================================
 # 测试数据
 # ============================================
@@ -58,7 +69,15 @@ static var USE_FIXED_SEED: bool = false
 # 在 _ready 中初始化以避免加载顺序问题
 static var FIXED_SEED: int = 12345
 
+## 是否为生产模式（发布前设为 true，自动关闭所有调试功能）
+const IS_PRODUCTION: bool = true
+
 func _ready() -> void:
+	# 如果是生产模式，自动重置所有调试开关
+	if IS_PRODUCTION:
+		reset_to_production()
+		print("[DebugConfig] 已切换到生产模式，所有调试功能已关闭")
+	
 	FIXED_SEED = GameConfig.DEBUG.default_seed
 
 # ============================================
@@ -78,6 +97,8 @@ static func reset_to_production() -> void:
 	GOD_MODE = false
 	SHOW_LEVEL_SOLUTION = false
 	QUICK_CLEAR_MODE = false
+	INFINITE_BOMB_MODE = false
+	DEBUG_BACKGROUND_PATH = ""
 	USE_FIXED_SEED = false
 
 ## 启用所有调试功能（开发调试时调用）
@@ -100,4 +121,6 @@ static func print_status() -> void:
 	print("DISABLE_BACKGROUND_IMAGES: ", DISABLE_BACKGROUND_IMAGES)
 	print("LOG_WORM_MOVEMENT: ", LOG_WORM_MOVEMENT)
 	print("GOD_MODE: ", GOD_MODE)
+	print("INFINITE_BOMB_MODE: ", INFINITE_BOMB_MODE)
+	print("DEBUG_BACKGROUND_PATH: ", DEBUG_BACKGROUND_PATH)
 	print("===========================")

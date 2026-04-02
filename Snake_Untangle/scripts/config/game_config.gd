@@ -153,6 +153,8 @@ const RESOURCES = {
 		"collision": "res://source/sound/effects/worm_collision.wav",
 		"death": "res://source/sound/effects/worm_death.wav",
 		"select": "res://source/sound/effects/worm_select.wav",
+		"bomb_shot": "res://source/sound/effects/bomb_shut.wav",
+		"bomb_boom": "res://source/sound/effects/bomb_boom.wav",
 	},
 	
 	# BGM 文件
@@ -167,6 +169,11 @@ const RESOURCES = {
 		"res://source/images/backgroup/bg_2.png",
 		"res://source/images/backgroup/bg_3.png",
 		"res://source/images/backgroup/bg_4.png",
+		"res://source/images/backgroup/bg_5.png",
+		"res://source/images/backgroup/bg_6.png",
+		"res://source/images/backgroup/bg_7.png",
+		"res://source/images/backgroup/bg_8.png",
+		"res://source/images/backgroup/bg_9.png",
 	],
 }
 

@@ -3,8 +3,9 @@
 [ext_resource type="Script" uid="uid://dllk148e1nvkx" path="res://scripts/game_scene.gd" id="1_qwerty"]
 [ext_resource type="Script" uid="uid://cwoxfic7h8mxi" path="res://scripts/ui_layer.gd" id="2_qwerty"]
 [ext_resource type="Texture2D" uid="uid://b54hue5nvvua5" path="res://source/images/backgroup/bg_1.png" id="3_bg1"]
-[ext_resource type="Texture2D" path="res://source/images/icon/bomb.png" id="4_bomb"]
-[ext_resource type="Texture2D" path="res://source/images/icon/snake.png" id="5_snake"]
+[ext_resource type="Texture2D" uid="uid://b8jgsv16jff2i" path="res://source/images/icon/bomb.png" id="4_bomb"]
+[ext_resource type="Texture2D" uid="uid://5vb31nqxk58f" path="res://source/images/icon/snake.png" id="5_snake"]
+[ext_resource type="Script" uid="uid://cuq5b7lqfx75g" path="res://scripts/bomb_button.gd" id="6_bomb"]
 
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 1
@@ -69,13 +70,13 @@ process_material = SubResource("ParticleProcessMaterial_1")
 script = ExtResource("2_qwerty")
 
 [node name="HUD" type="Control" parent="UILayer" unique_id=748441335]
-visible = false
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 1
 
 [node name="TopBar" type="HBoxContainer" parent="UILayer/HUD" unique_id=2030786880]
 layout_mode = 1
@@ -103,10 +104,10 @@ theme_override_constants/separation = 5
 alignment = 2
 
 [node name="SnakeIcon" type="TextureRect" parent="UILayer/HUD/TopBar/RemainingLabel" unique_id=1884155431]
+custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
 texture = ExtResource("5_snake")
 expand_mode = 2
-custom_minimum_size = Vector2(32, 32)
 
 [node name="CountLabel" type="Label" parent="UILayer/HUD/TopBar/RemainingLabel" unique_id=1212998920]
 layout_mode = 2
@@ -126,21 +127,21 @@ offset_right = -20.0
 offset_bottom = -20.0
 grow_horizontal = 2
 grow_vertical = 0
+mouse_filter = 1
 
 [node name="ScoreLabel" type="Label" parent="UILayer/HUD/BottomBar" unique_id=2108321520]
 layout_mode = 1
 anchors_preset = 4
 anchor_top = 0.5
 anchor_bottom = 0.5
-offset_top = 0.0
 offset_bottom = 20.0
 grow_vertical = 2
 theme_override_font_sizes/font_size = 32
 text = "分数: 0"
-horizontal_alignment = 0
 vertical_alignment = 1
 
 [node name="BombButton" type="TextureButton" parent="UILayer/HUD/BottomBar" unique_id=2108321521]
+custom_minimum_size = Vector2(68, 68)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -148,15 +149,14 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -24.0
-offset_top = 0.0
 offset_right = 24.0
 offset_bottom = 24.0
 grow_horizontal = 2
 grow_vertical = 2
-custom_minimum_size = Vector2(68, 68)
 texture_normal = ExtResource("4_bomb")
 ignore_texture_size = true
 stretch_mode = 5
+script = ExtResource("6_bomb")
 
 [node name="Menus" type="Control" parent="UILayer" unique_id=1119891555]
 layout_mode = 3
@@ -165,6 +165,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 
 [node name="MainMenu" type="Control" parent="UILayer/Menus" unique_id=321822498]
 layout_mode = 1
@@ -328,7 +329,10 @@ grow_vertical = 2
 theme_override_font_sizes/font_size = 28
 text = "下一关"
 
-[node name="Effects" type="Control" parent="UILayer" unique_id=1756892170]
+[node name="EffectsLayer" type="CanvasLayer" parent="." unique_id=1756892170]
+layer = 100
+
+[node name="Effects" type="Control" parent="EffectsLayer" unique_id=396694195]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -337,7 +341,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="FlashEffect" type="ColorRect" parent="UILayer/Effects" unique_id=396694196]
+[node name="FlashEffect" type="ColorRect" parent="EffectsLayer/Effects" unique_id=396694196]
 visible = false
 layout_mode = 1
 anchors_preset = 15

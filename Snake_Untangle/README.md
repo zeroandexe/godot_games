@@ -1,6 +1,6 @@
-# Snake Grid（网格贪吃蛇）
+# Snake Untangle（蛇群解结）
 
-一款基于网格的贪吃蛇式解谜游戏，玩家需要引导小虫移出屏幕，避免碰撞。
+一款基于网格的拓扑解谜游戏，玩家需要引导缠绕的霓虹小虫移出屏幕，解开错综复杂的缠绕局面。
 
 ## 🎮 游戏玩法
 
@@ -12,6 +12,12 @@
 - **贪吃蛇移动**：头部前进一格，身体每段依次跟随前一段
 - **碰撞反弹**：如果头部碰到其他小虫的身体，会立即反弹（尾巴变头，原路退回）
 - **自由端判定**：只有头部和尾部都没有被其他小虫覆盖时才能移动
+
+### 炸弹道具
+- **触发方式**：点击屏幕底部的炸弹按钮
+- **效果**：发射粒子束穿透屏幕，在顶部触发大爆炸，强制移除一只小虫
+- **费用**：使用炸弹会消耗分数，费用随连续使用次数指数增长（关卡×2ⁿ）
+- **策略**：手动消除虫子可重置炸弹费用，合理搭配使用炸弹和手动消除
 
 ### 视觉提示
 | 状态 | 视觉效果 |
@@ -26,133 +32,82 @@
 2. **移动规则**：点击箭头方向后，小虫头部前进一格，身体跟随（类似贪吃蛇）
 3. **碰撞反弹**：头部碰到其他小虫身体时，尾巴变成新头部，沿原路退回起点
 4. **过关条件**：将所有小虫移出屏幕边界即过关
-5. **关卡递进**：每过一关网格细化一格（10×10 → 11×11 → 12×12...）
+5. **关卡递进**：每过一关网格细化一格
+6. **分数系统**：消除虫子获得分数（关卡×倍率），连续消除可累积倍率
 
 ## 🏗️ 项目结构
 
 ```
-line_game/
-├── project.godot              # Godot项目配置（竖屏Android适配）
+Snake_Untangle/
+├── project.godot              # Godot项目配置（竖屏移动端适配）
 ├── README.md                  # 本文件
 ├── scenes/
-│   └── main.tscn             # 主场景（包含GameScene和UILayer）
-└── scripts/
-    ├── game_manager.gd       # 全局游戏管理器（状态、音效、震动）
-    ├── save_manager.gd       # 存档系统（JSON格式）
-    ├── worm.gd               # 核心网格小虫类（贪吃蛇移动）
-    ├── level_generator.gd    # 网格关卡生成器（随关卡增大网格）
-    ├── game_scene.gd         # 游戏主逻辑（网格点击、相机控制）
-    └── ui_layer.gd           # UI管理系统
+│   └── main.tscn             # 主场景（包含GameScene、UILayer、特效层）
+├── scripts/
+│   ├── game_manager.gd       # 全局游戏管理器（状态、音效、背景）
+│   ├── save_manager.gd       # 存档系统（JSON格式）
+│   ├── bomb_button.gd        # 炸弹按钮逻辑
+│   ├── worm.gd               # 核心网格小虫类（贪吃蛇移动）
+│   ├── level_generator.gd    # 网格关卡生成器
+│   ├── game_scene.gd         # 游戏主逻辑
+│   ├── ui_layer.gd           # UI管理系统
+│   ├── config/
+│   │   └── game_config.gd    # 游戏配置（颜色、音效、背景）
+│   └── debug_config.gd       # 调试配置开关
+└── source/
+    ├── images/
+    │   ├── backgroup/        # 背景图片
+    │   └── icon/             # 图标资源
+    └── sound/
+        ├── bgm/              # 背景音乐
+        └── effects/          # 音效文件
 ```
 
-## 📦 核心模块说明
+## 🎨 游戏特色
 
-### Worm（网格小虫）
-```gdscript
-class_name Worm
-extends Area2D
-```
+### 霓虹视觉风格
+- **多彩小虫**：6种霓虹色主题（橙、青、粉、绿、紫、黄）
+- **程序化绘制**：所有视觉元素动态生成，无外部图片依赖
+- **发光效果**：CanvasItem.modulate 实现高亮发光
 
-核心功能：
-- **网格移动**：基于 `Vector2i` 网格坐标，网格大小 40px
-- **贪吃蛇跟随**：`move_one_step()` 实现头部牵引、身体跟随
-- **碰撞反弹**：`start_reverse()` 尾巴变头、原路退回
-- **三角形头部**：白色三角形箭头，指示移动方向
+### 动态背景系统
+- **随机背景**：每关随机选择背景图片
+- **无缝切换**：背景随关卡变化自动切换
+- **扩展性**：支持添加新背景图片
 
-关键属性：
-```gdscript
-grid_positions: Array[Vector2i]      # 网格位置（头部在索引0）
-move_direction: Vector2i             # 移动方向（四方向）
-move_history: Array[Vector2i]        # 移动历史（用于反弹）
-```
-
-### LevelGenerator（网格关卡生成器）
-```gdscript
-class_name LevelGenerator
-extends Node
-```
-
-生成算法：
-1. **网格大小**：基础10×10，每关增加1（第N关为 (9+N)×(9+N)）
-2. **路径生成**：随机蜿蜒路径，允许90度转弯，避免自交
-3. **可解性验证**：确保至少有一个小虫的自由端未被覆盖
-
-难度曲线：
-| 关卡范围 | 网格大小 | 虫子数量 | 复杂度 |
-|---------|---------|---------|--------|
-| 1-5 | 10×10 ~ 14×14 | 3-4 条 | 0.2 |
-| 6-15 | 15×15 ~ 24×24 | 4-6 条 | 0.4 |
-| 16+ | 25×25+ | 6-10 条 | 0.6 |
-
-### GameScene（游戏场景）
-```gdscript
-extends Node2D
-```
-
-核心逻辑：
-- **相机自适应**：根据网格大小自动调整缩放和位置
-- **箭头指示器**：在可移动小虫头部显示方向箭头
-- **点击检测**：检测点击是否在箭头方向，触发移动
-- **反弹处理**：碰撞后自动触发反弹动画
+### 音效系统
+- **操作反馈**：点击、移动、碰撞、消除均有对应音效
+- **炸弹音效**：独立的发射和爆炸音效
+- **程序生成**：部分音效程序化合成
 
 ## 🛠️ 技术特性
 
-### 零素材原则
-- **无外部图片**：所有视觉元素程序化生成（Polygon2D绘制）
-- **程序音效**：使用 `AudioStreamGenerator` 合成音效
-- **动态着色**：霓虹色彩 + CanvasItem.modulate 发光效果
+### 零素材原则（基础玩法）
+- **程序化绘制**：核心玩法元素（小虫、网格）完全程序化生成
+- **动态着色**：霓虹色彩 + 发光效果
+- **资源扩展**：背景、音效采用外部资源
 
 ### 网格系统
-```gdscript
-const GRID_SIZE: float = 40.0
-
-func _grid_to_world(grid_pos: Vector2i) -> Vector2:
-    return Vector2(grid_pos.x * GRID_SIZE, grid_pos.y * GRID_SIZE)
-```
+基于 `Vector2i` 网格坐标，动态计算网格大小以适应屏幕尺寸
 
 ### 贪吃蛇移动算法
-```gdscript
-func move_one_step(all_worms: Array[Worm]) -> bool:
-    # 1. 检查碰撞
-    if check_collision_ahead(all_worms):
-        start_reverse()  # 碰撞则反弹
-        return false
-    
-    # 2. 记录历史（用于反弹）
-    move_history.append(grid_positions[-1])
-    
-    # 3. 身体跟随（从尾部开始）
-    for i in range(grid_positions.size() - 1, 0, -1):
-        grid_positions[i] = grid_positions[i - 1]
-    
-    # 4. 头部前进
-    grid_positions[0] += move_direction
-```
+头部牵引、身体跟随的移动方式，支持碰撞反弹机制
 
-### 反弹机制
-```gdscript
-func start_reverse() -> void:
-    grid_positions.reverse()  # 尾巴变头
-    move_direction = grid_positions[0] - grid_positions[1]
-    move_history.clear()
-    # 自动沿原路退回...
-```
-
-### Android适配
+### 移动端适配
 - **竖屏锁定**：720x1280 分辨率，自适应拉伸
-- **触摸热区**：检测半径 = 网格中心 ± 头部大小
+- **触摸优化**：适配手指点击热区
 - **震动反馈**：支持 `Input.vibrate_handheld()`
 
 ## 🚀 运行方式
 
 ### 开发环境
-- **引擎**：Godot 4.4+
+- **引擎**：Godot 4.6+
 - **语言**：GDScript（严格类型）
 - **平台**：Android 10+（API 29+）
 
 ### 本地运行
-1. 安装 [Godot 4.4](https://godotengine.org/)
-2. 打开项目文件夹 `line_game/`
+1. 安装 [Godot 4.6](https://godotengine.org/)
+2. 打开项目文件夹
 3. 按 **F5** 或点击播放按钮运行
 
 ### Android导出
@@ -168,52 +123,37 @@ func start_reverse() -> void:
 ```json
 {
   "current_level": 5,
+  "score": 1200,
   "settings": {
     "sound_enabled": true,
     "sound_volume": 0.8,
     "vibration_enabled": true,
-    "colorblind_mode": false
-  },
-  "level_stats": {
-    "3": {
-      "best_moves": 4,
-      "last_played": {...}
-    }
+    "start_level": 1
   }
 }
 ```
 
-## 🎨 颜色配置
+## 🔧 调试配置
 
-霓虹色彩预设（`Worm.NEON_COLORS`）：
-```gdscript
-Color(1.0, 0.5, 0.0)   # 橙色
-Color(0.0, 0.8, 1.0)   # 青色
-Color(1.0, 0.2, 0.6)   # 粉色
-Color(0.2, 1.0, 0.4)   # 绿色
-Color(0.8, 0.3, 1.0)   # 紫色
-Color(1.0, 0.9, 0.2)   # 黄色
+项目提供丰富的调试选项，可在 `scripts/debug_config.gd` 中配置：
+
+| 功能 | 说明 |
+|------|------|
+| 无限炸弹模式 | 使用炸弹不消耗分数 |
+| 调试背景 | 强制指定背景图片进行测试 |
+| 网格线显示 | 显示调试网格线 |
+| 上帝模式 | 虫子不会死亡 |
+| 快速过关 | 点击任意虫子即可过关 |
+
+**生产模式**：将 `IS_PRODUCTION` 设为 `true` 自动关闭所有调试功能
+
+## 🎵 音乐提示词
+
 ```
-
-## 🔧 调试技巧
-
-启用调试输出：
-```gdscript
-# game_manager.gd
-var remaining_worms: int = 0:
-    set(value):
-        remaining_worms = value
-        print("DEBUG: remaining_worms = ", value)
-```
-
-常见问题：
-1. **小虫不移动**：检查 `is_free_end` 是否正确计算
-2. **碰撞检测失败**：确认 `is_grid_on_body` 排除头部判断
-3. **箭头不显示**：检查 `_update_direction_arrows` 是否在 `_process` 中调用
-
-## 音乐提示词
-```
-16-bit chiptune puzzle game background music, SNES retro style, soft square wave melody, playful triangle bass, gentle FM synth bells, airy noise percussion, pastel colorful atmosphere, relaxing untimed exploration, whimsical carefree mood, seamless loop, no vocals, healing casual game BGM, female-friendly, stress-free maze solving
+16-bit chiptune puzzle game background music, SNES retro style, 
+soft square wave melody, playful triangle bass, gentle FM synth bells, 
+airy noise percussion, pastel colorful atmosphere, relaxing untimed exploration, 
+whimsical carefree mood, seamless loop, no vocals, healing casual game BGM
 ```
 
 ## 📄 许可证
@@ -228,7 +168,7 @@ MIT License - 可自由使用和修改
 
 ---
 
-**文档版本**：v2.0  
-**最后更新**：2026-03-29  
-**适用引擎**：Godot 4.4+  
+**文档版本**：v3.0  
+**最后更新**：2026-04-02  
+**适用引擎**：Godot 4.6+  
 **目标平台**：Android（竖屏）

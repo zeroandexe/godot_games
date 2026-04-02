@@ -19,6 +19,9 @@ var _center_explosion_triggered: bool = false
 var _consecutive_bomb_count: int = 0  # 连续爆炸次数
 var _has_manually_removed_worm: bool = true  # 是否手动消除过虫子（初始为true，第一次使用炸弹时重置）
 
+# 防止重复点击
+var _is_bomb_in_progress: bool = false  # 是否正在爆炸流程中
+
 func _ready() -> void:
 
 	print("[BombButton] 按钮已创建")
@@ -137,7 +140,15 @@ func _stop_glow_effect() -> void:
 
 ## 炸弹释放 - 创建粒子效果
 func _on_bomb_released() -> void:
+	# 防止重复点击：如果已有爆炸在进行中，忽略此次点击
+	if _is_bomb_in_progress:
+		print("[BombButton] 爆炸进行中，忽略重复点击")
+		return
+	
 	print("[BombButton] 💣 炸弹触发！")
+	
+	# 标记爆炸开始
+	_is_bomb_in_progress = true
 	
 	# 调试模式：无限炸弹，不检查分数
 	if DebugConfig.INFINITE_BOMB_MODE:
@@ -146,6 +157,7 @@ func _on_bomb_released() -> void:
 		# 检查分数是否为0
 		if GameManager.score <= 0:
 			print("[BombButton] 分数为0，无法使用炸弹")
+			_is_bomb_in_progress = false
 			return
 	
 	# 计算本次使用炸弹的费用：关卡数 * 2^连续次数
@@ -332,7 +344,9 @@ func _trigger_top_explosion(theme_color: Color, trigger: Area2D, top_boundary: A
 	if is_instance_valid(center_boundary):
 		center_boundary.queue_free()
 	
-	print("[BombButton] 顶部大爆炸已触发")
+	# 爆炸流程结束，允许下次点击
+	_is_bomb_in_progress = false
+	print("[BombButton] 顶部大爆炸已触发，允许下次点击")
 
 ## 调用 GameScene 移除虫子
 func _call_game_scene_remove_worm() -> void:

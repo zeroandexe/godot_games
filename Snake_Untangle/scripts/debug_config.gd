@@ -58,7 +58,7 @@ static var INFINITE_BOMB_MODE: bool = true
 
 ## 强制使用指定背景图片（用于调试新背景）
 ## 设置为空字符串 "" 则使用随机背景
-static var DEBUG_BACKGROUND_PATH: String = "res://source/images/backgroup/bg_9.png"
+static var DEBUG_BACKGROUND_PATH: String = ""
 
 # ============================================
 # 测试数据
